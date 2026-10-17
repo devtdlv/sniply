@@ -1,22 +1,151 @@
 @import "tailwindcss";
 
 :root {
-  --bg: #f3f6f8;
+  --bg: #eef2f4;
   --bg-elevated: #ffffff;
-  --fg: #14202b;
-  --muted: #5c6b7a;
+  --fg: #132029;
+  --muted: #5a6b7a;
   --accent: #0b6e4f;
   --accent-hover: #095c42;
+  --accent-soft: #d9efe6;
   --danger: #b42318;
-  --border: #d5dee7;
+  --danger-soft: #fce8e6;
+  --border: #d3dde6;
   --success: #0b6e4f;
+  --success-soft: #e3f5ec;
+  --shadow: 0 12px 40px rgba(19, 32, 41, 0.08);
+  --ring: rgba(11, 110, 79, 0.35);
+  --header-h: 4rem;
 }
 
 body {
   min-height: 100vh;
   color: var(--fg);
   background:
-    radial-gradient(900px 420px at 0% 0%, #d7ebe3 0%, transparent 55%),
-    radial-gradient(700px 380px at 100% 10%, #dce7f2 0%, transparent 50%),
-    linear-gradient(180deg, #eef3f6 0%, var(--bg) 45%, #e8eef3 100%);
+    radial-gradient(1000px 480px at 0% -5%, #d5ebe3 0%, transparent 55%),
+    radial-gradient(820px 420px at 100% 0%, #d9e5f2 0%, transparent 50%),
+    linear-gradient(180deg, #f5f8fa 0%, var(--bg) 42%, #e8eef3 100%);
+  font-family: var(--font-sans), "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+}
+
+.font-mono,
+code,
+kbd,
+samp {
+  font-family: var(--font-mono), ui-monospace, "Cascadia Code", monospace;
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes pulse-soft {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 0.85;
+  }
+}
+
+.animate-fade-up {
+  animation: fade-up 0.35s ease-out both;
+}
+
+.animate-toast-in {
+  animation: toast-in 0.28s ease-out both;
+}
+
+.skeleton {
+  animation: pulse-soft 1.2s ease-in-out infinite;
+  background: linear-gradient(90deg, #e6edf2, #f3f7fa, #e6edf2);
+  background-size: 200% 100%;
+}
+
+.input-field {
+  width: 100%;
+  border-radius: 0.65rem;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  padding: 0.65rem 0.8rem;
+  outline: none;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.input-field:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--ring);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  border-radius: 0.65rem;
+  padding: 0.65rem 1rem;
+  font-weight: 500;
+  transition:
+    background-color 0.15s ease,
+    opacity 0.15s ease,
+    transform 0.15s ease;
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: #fff;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.btn-secondary {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  color: var(--fg);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: #f5f8fa;
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--muted);
+}
+
+.btn-ghost:hover:not(:disabled) {
+  background: rgba(19, 32, 41, 0.04);
+  color: var(--fg);
 }

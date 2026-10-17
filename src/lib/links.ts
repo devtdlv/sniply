@@ -1,9 +1,11 @@
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import {
   generateShortCode,
   isReservedCode,
   validateAlias,
 } from "@/lib/codes";
+import type { ListLinksQuery, ListSort } from "@/lib/list-query";
 import { validateDestinationUrl } from "@/lib/validate-url";
 
 const MAX_CODE_ATTEMPTS = 8;
@@ -152,4 +154,90 @@ export async function recordClick(linkId: string): Promise<void> {
   await prisma.click.create({
     data: { linkId },
   });
+}
+
+export type ListedLink = {
+  id: string;
+  code: string;
+  destination: string;
+  createdAt: Date;
+  clickCount: number;
+};
+
+export type ListLinksResult = {
+  items: ListedLink[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  sort: ListSort;
+  search: string;
+};
+
+function buildListWhere(search: string): Prisma.LinkWhereInput | undefined {
+  if (!search) return undefined;
+
+  return {
+    OR: [
+      { destination: { contains: search, mode: "insensitive" } },
+      { code: { contains: search, mode: "insensitive" } },
+    ],
+  };
+}
+
+function buildListOrderBy(
+  sort: ListSort,
+): Prisma.LinkOrderByWithRelationInput[] {
+  switch (sort) {
+    case "oldest":
+      return [{ createdAt: "asc" }, { id: "asc" }];
+    case "most_clicked":
+      return [{ clicks: { _count: "desc" } }, { createdAt: "desc" }, { id: "desc" }];
+    case "newest":
+    default:
+      return [{ createdAt: "desc" }, { id: "desc" }];
+  }
+}
+
+export async function listLinks(
+  query: ListLinksQuery,
+): Promise<ListLinksResult> {
+  const where = buildListWhere(query.search);
+  const orderBy = buildListOrderBy(query.sort);
+  const skip = (query.page - 1) * query.pageSize;
+
+  const [rows, total] = await Promise.all([
+    prisma.link.findMany({
+      where,
+      orderBy,
+      skip,
+      take: query.pageSize,
+      select: {
+        id: true,
+        code: true,
+        destination: true,
+        createdAt: true,
+        _count: { select: { clicks: true } },
+      },
+    }),
+    prisma.link.count({ where }),
+  ]);
+
+  const totalPages = total === 0 ? 0 : Math.ceil(total / query.pageSize);
+
+  return {
+    items: rows.map((row) => ({
+      id: row.id,
+      code: row.code,
+      destination: row.destination,
+      createdAt: row.createdAt,
+      clickCount: row._count.clicks,
+    })),
+    total,
+    page: query.page,
+    pageSize: query.pageSize,
+    totalPages,
+    sort: query.sort,
+    search: query.search,
+  };
 }

@@ -2,7 +2,7 @@
 
 Local-first URL shortener and analytics application (Portfolio Project #2).
 
-Milestone 1 covers core shortening: secure link creation, short-code and custom-alias allocation, redirect handling, destination validation, and focused automated tests. Dashboard, analytics UI, and QR codes are intentionally out of scope for this milestone.
+Milestone 1 covers secure shortening, redirects, and click recording. Milestone 2 adds a link management dashboard with search, sorting, pagination, and create-flow UX. Detailed analytics charts and QR codes remain out of scope.
 
 ## Stack
 
@@ -14,21 +14,32 @@ Milestone 1 covers core shortening: secure link creation, short-code and custom-
 - Prisma
 - Vitest
 
-## Features (Milestone 1)
+## Features
 
-- Create short links via `POST /api/links` or the minimal home form
+### Milestone 1
+
+- Create short links via `POST /api/links`
 - Optional custom aliases with conflict detection (`409`)
 - Cryptographically random short codes when no alias is provided
 - Redirect via `GET /:code` (`302`) with click event recording
 - Destination validation that rejects unsafe schemes, credentials, localhost, and private/link-local network targets (including DNS-resolved addresses)
 
+### Milestone 2
+
+- Responsive SaaS-style dashboard at `/`
+- Create links from a modal with validation, conflict, success, and pending states
+- List links with destination, short code, short URL, created date, and total clicks
+- Search by destination URL or short code
+- Sort by newest, oldest, or most clicked
+- Copy short URL to clipboard with confirmation
+- Paginated `GET /api/links` backed by Prisma (default 10 per page, max 50)
+- Loading, empty, and error states in the UI
+
 ## Prerequisites
 
-- **Node.js 20.17.0 or later** (LTS). Developed and verified on Node.js v20.17.0.
+- **Node.js 24 LTS** (recommended). `package.json` engines require `>=24.0.0`.
 - PostgreSQL 14+ running locally
-- npm 10+ (ships with Node.js 20)
-
-The `engines.node` field in `package.json` is set to `>=20.17.0`.
+- npm 10+ (ships with current Node.js releases)
 
 ## Environment variables
 
@@ -58,7 +69,7 @@ npm run db:migrate:deploy
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+Open [http://localhost:3000](http://localhost:3000) for the dashboard.
 
 For local schema iteration while developing new models, prefer `npm run db:migrate` (`prisma migrate dev`) over `db:push` so changes stay in versioned migrations.
 
@@ -81,6 +92,45 @@ For local schema iteration while developing new models, prefer `npm run db:migra
 
 ## API
 
+### List links
+
+`GET /api/links`
+
+Query parameters:
+
+| Param | Default | Description |
+| --- | --- | --- |
+| `q` or `search` | _(empty)_ | Case-insensitive match on destination or short code |
+| `sort` | `newest` | `newest`, `oldest`, or `most_clicked` |
+| `page` | `1` | 1-based page index |
+| `pageSize` | `10` | Page size (max `50`) |
+
+**200**
+
+```json
+{
+  "items": [
+    {
+      "id": "clx...",
+      "code": "docs",
+      "destination": "https://example.com/path",
+      "shortUrl": "http://localhost:3000/docs",
+      "createdAt": "2026-01-01T00:00:00.000Z",
+      "clickCount": 4
+    }
+  ],
+  "total": 1,
+  "page": 1,
+  "pageSize": 10,
+  "totalPages": 1,
+  "sort": "newest",
+  "search": ""
+}
+```
+
+**400** invalid query parameters  
+**500** unexpected server error
+
 ### Create a short link
 
 `POST /api/links`
@@ -102,7 +152,8 @@ For local schema iteration while developing new models, prefer `npm run db:migra
   "code": "docs",
   "destination": "https://example.com/path",
   "shortUrl": "http://localhost:3000/docs",
-  "createdAt": "2026-01-01T00:00:00.000Z"
+  "createdAt": "2026-01-01T00:00:00.000Z",
+  "clickCount": 0
 }
 ```
 
@@ -135,12 +186,14 @@ Limitation: a destination that later redirects browsers to an internal host is o
 ```text
 prisma/schema.prisma                         Link + Click models
 prisma/migrations/20261017213200_init/       Initial versioned migration
-src/app/api/links/route.ts                   Create API
+src/app/api/links/route.ts                   List + create API
 src/app/[code]/route.ts                      Redirect handler
+src/components/dashboard/                    Dashboard UI
 src/lib/codes.ts                             Short codes + alias rules
 src/lib/validate-url.ts                      Destination safety checks
-src/lib/links.ts                             Create / resolve / click logic
-tests/                                       Vitest coverage for Milestone 1
+src/lib/list-query.ts                        List query parsing
+src/lib/links.ts                             Create / resolve / list / click logic
+tests/                                       Vitest coverage
 ```
 
 ## Verification checklist
@@ -153,20 +206,13 @@ tests/                                       Vitest coverage for Milestone 1
 6. `npm run typecheck`
 7. `npm run build`
 8. `npm run dev`
-9. Create a link from the home page or:
-
-```bash
-curl -X POST http://localhost:3000/api/links \
-  -H "Content-Type: application/json" \
-  -d "{\"destination\":\"https://example.com\"}"
-```
-
-10. Open the returned `shortUrl` and confirm a `302` redirect to the destination
-11. Retry the same custom alias and confirm `409`
-12. Try `http://127.0.0.1/` and confirm `400`
+9. Open `/`, create a link, confirm it appears in the table
+10. Search, sort, paginate, and copy a short URL
+11. Open a short URL and confirm redirect + click count increase after refresh
+12. Retry a duplicate alias and confirm a clear conflict error
 
 ## Out of scope (later milestones)
 
-- Analytics dashboard / charts
+- Detailed analytics charts
 - QR codes
 - Authentication, Redis, Docker, paid services, public deployment
