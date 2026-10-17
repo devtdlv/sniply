@@ -24,9 +24,11 @@ Milestone 1 covers core shortening: secure link creation, short-code and custom-
 
 ## Prerequisites
 
-- Node.js 20+
+- **Node.js 20.17.0 or later** (LTS). Developed and verified on Node.js v20.17.0.
 - PostgreSQL 14+ running locally
-- npm
+- npm 10+ (ships with Node.js 20)
+
+The `engines.node` field in `package.json` is set to `>=20.17.0`.
 
 ## Environment variables
 
@@ -49,14 +51,16 @@ cp .env.example .env
 # Install dependencies (also runs prisma generate via postinstall)
 npm install
 
-# Create the database schema
-npm run db:push
+# Apply versioned Prisma migrations
+npm run db:migrate:deploy
 
 # Start the Next.js dev server
 npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
+
+For local schema iteration while developing new models, prefer `npm run db:migrate` (`prisma migrate dev`) over `db:push` so changes stay in versioned migrations.
 
 ### Useful scripts
 
@@ -65,11 +69,15 @@ Open [http://localhost:3000](http://localhost:3000).
 | `npm run dev` | Start development server |
 | `npm run build` | Production build |
 | `npm run start` | Start production server |
+| `npm run lint` | Run ESLint (flat config / ESLint CLI) |
+| `npm run typecheck` | TypeScript check (`tsc --noEmit`) |
 | `npm test` | Run Vitest suite once |
 | `npm run test:watch` | Vitest watch mode |
 | `npm run db:generate` | Regenerate Prisma Client |
-| `npm run db:push` | Push Prisma schema to the database |
-| `npm run db:migrate` | Create/apply Prisma migrations |
+| `npm run db:migrate` | Create/apply migrations in development |
+| `npm run db:migrate:deploy` | Apply pending migrations (existing DBs / CI) |
+| `npm run db:migrate:status` | Show migration status |
+| `npm run db:push` | Push schema without a migration (legacy / emergency only) |
 
 ## API
 
@@ -125,23 +133,27 @@ Limitation: a destination that later redirects browsers to an internal host is o
 ## Project layout
 
 ```text
-prisma/schema.prisma          Link + Click models
-src/app/api/links/route.ts    Create API
-src/app/[code]/route.ts       Redirect handler
-src/lib/codes.ts              Short codes + alias rules
-src/lib/validate-url.ts       Destination safety checks
-src/lib/links.ts              Create / resolve / click logic
-tests/                        Vitest coverage for Milestone 1
+prisma/schema.prisma                         Link + Click models
+prisma/migrations/20261017213200_init/       Initial versioned migration
+src/app/api/links/route.ts                   Create API
+src/app/[code]/route.ts                      Redirect handler
+src/lib/codes.ts                             Short codes + alias rules
+src/lib/validate-url.ts                      Destination safety checks
+src/lib/links.ts                             Create / resolve / click logic
+tests/                                       Vitest coverage for Milestone 1
 ```
 
 ## Verification checklist
 
 1. `npm install`
 2. Configure `.env` from `.env.example`
-3. `npm run db:push`
+3. `npm run db:migrate:deploy`
 4. `npm test`
-5. `npm run dev`
-6. Create a link from the home page or:
+5. `npm run lint`
+6. `npm run typecheck`
+7. `npm run build`
+8. `npm run dev`
+9. Create a link from the home page or:
 
 ```bash
 curl -X POST http://localhost:3000/api/links \
@@ -149,9 +161,9 @@ curl -X POST http://localhost:3000/api/links \
   -d "{\"destination\":\"https://example.com\"}"
 ```
 
-7. Open the returned `shortUrl` and confirm a `302` redirect to the destination
-8. Retry the same custom alias and confirm `409`
-9. Try `http://127.0.0.1/` and confirm `400`
+10. Open the returned `shortUrl` and confirm a `302` redirect to the destination
+11. Retry the same custom alias and confirm `409`
+12. Try `http://127.0.0.1/` and confirm `400`
 
 ## Out of scope (later milestones)
 
