@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { AnalyticsOverview } from "@/components/analytics/AnalyticsOverview";
 import { CreateLinkDialog } from "@/components/dashboard/CreateLinkDialog";
 import { LinksTable } from "@/components/dashboard/LinksTable";
 import { LinksToolbar } from "@/components/dashboard/LinksToolbar";
@@ -10,6 +11,7 @@ import type {
   DashboardLink,
   LinksListResponse,
 } from "@/components/dashboard/types";
+import { AppHeader } from "@/components/layout/AppHeader";
 import { DEFAULT_PAGE_SIZE, type ListSort } from "@/lib/list-query";
 
 type ToastState = {
@@ -113,25 +115,7 @@ export function Dashboard() {
 
   return (
     <div className="min-h-screen">
-      <header className="sticky top-0 z-40 border-b border-[var(--border)] bg-[rgba(245,248,250,0.86)] backdrop-blur-md">
-        <div className="mx-auto flex h-[var(--header-h)] w-full max-w-6xl items-center justify-between px-4 sm:px-6">
-          <div className="flex items-center gap-3">
-            <span
-              aria-hidden="true"
-              className="grid h-9 w-9 place-items-center rounded-xl bg-[var(--accent)] text-sm font-semibold tracking-tight text-white shadow-[0_8px_20px_rgba(11,110,79,0.28)]"
-            >
-              S
-            </span>
-            <div>
-              <p className="text-lg font-semibold tracking-tight">Sniply</p>
-              <p className="text-xs text-[var(--muted)]">Local-first short links</p>
-            </div>
-          </div>
-          <p className="hidden text-sm text-[var(--muted)] sm:block">
-            Portfolio project
-          </p>
-        </div>
-      </header>
+      <AppHeader active="dashboard" />
 
       <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
         <section className="animate-fade-up mb-6 flex flex-col gap-4 sm:mb-8 sm:flex-row sm:items-end sm:justify-between">
@@ -140,7 +124,7 @@ export function Dashboard() {
               Links
             </h1>
             <p className="mt-2 max-w-xl text-[var(--muted)]">
-              Create short URLs, search your library, and track total clicks.
+              Create short URLs, review analytics, and download QR codes.
             </p>
           </div>
           <button
@@ -151,6 +135,8 @@ export function Dashboard() {
             Create link
           </button>
         </section>
+
+        <AnalyticsOverview refreshToken={reloadToken} />
 
         <section className="animate-fade-up overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--bg-elevated)] shadow-[var(--shadow)]">
           <div className="border-b border-[var(--border)] p-4 sm:p-5">

@@ -19,6 +19,7 @@ export const RESERVED_CODES = new Set([
   "static",
   "assets",
   "health",
+  "links",
 ]);
 
 export type AliasValidationResult =

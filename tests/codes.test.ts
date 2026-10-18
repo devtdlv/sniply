@@ -66,6 +66,7 @@ describe("isReservedCode", () => {
   it("matches reserved values case-insensitively", () => {
     expect(isReservedCode("API")).toBe(true);
     expect(isReservedCode("_next")).toBe(true);
+    expect(isReservedCode("links")).toBe(true);
     expect(isReservedCode("readable")).toBe(false);
   });
 });

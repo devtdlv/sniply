@@ -2,7 +2,7 @@
 
 Local-first URL shortener and analytics application (Portfolio Project #2).
 
-Milestone 1 covers secure shortening, redirects, and click recording. Milestone 2 adds a link management dashboard with search, sorting, pagination, and create-flow UX. Detailed analytics charts and QR codes remain out of scope.
+Milestone 1 covers secure shortening, redirects, and click recording. Milestone 2 adds a link management dashboard. Milestone 3 adds click analytics and downloadable QR codes.
 
 ## Stack
 
@@ -13,6 +13,7 @@ Milestone 1 covers secure shortening, redirects, and click recording. Milestone 
 - PostgreSQL
 - Prisma
 - Vitest
+- `qrcode` (local QR generation, no external service)
 
 ## Features
 
@@ -35,6 +36,23 @@ Milestone 1 covers secure shortening, redirects, and click recording. Milestone 
 - Paginated `GET /api/links` backed by Prisma (default 10 per page, max 50)
 - Loading, empty, and error states in the UI
 
+### Milestone 3
+
+- Dashboard analytics overview: total links, total clicks, clicks in range, and a responsive bar chart
+- Date filters: `7d`, `30d`, and `all`
+- Per-link analytics page at `/links/:code` with destination, short URL, created date, totals, and chart
+- Local QR preview and PNG download for each short URL
+- Server-side click aggregation from existing `Click` rows (no schema changes)
+
+## Analytics timezone convention
+
+All analytics day buckets and range windows use **UTC calendar days**.
+
+- Day keys are `YYYY-MM-DD` in UTC
+- `7d` / `30d` include today (UTC) and the previous 6 / 29 UTC days
+- `all` spans from the first click day through today (UTC); empty when there are no clicks
+- API responses include `"timezone": "UTC"`
+
 ## Prerequisites
 
 - **Node.js 24 LTS** (recommended). `package.json` engines require `>=24.0.0`.
@@ -48,7 +66,7 @@ Copy `.env.example` to `.env` and fill in values:
 | Variable | Required | Description |
 | --- | --- | --- |
 | `DATABASE_URL` | Yes | PostgreSQL connection string for Prisma |
-| `NEXT_PUBLIC_APP_URL` | Yes | Public origin used when returning `shortUrl` (no trailing slash), e.g. `http://localhost:3000` |
+| `NEXT_PUBLIC_APP_URL` | Yes | Public origin used when returning `shortUrl` and encoding QR codes (no trailing slash), e.g. `http://localhost:3000` |
 
 Example:
 
@@ -105,31 +123,35 @@ Query parameters:
 | `page` | `1` | 1-based page index |
 | `pageSize` | `10` | Page size (max `50`) |
 
-**200**
+### Overview analytics
+
+`GET /api/analytics?range=7d|30d|all`
+
+Returns totals plus a UTC day series:
 
 ```json
 {
-  "items": [
-    {
-      "id": "clx...",
-      "code": "docs",
-      "destination": "https://example.com/path",
-      "shortUrl": "http://localhost:3000/docs",
-      "createdAt": "2026-01-01T00:00:00.000Z",
-      "clickCount": 4
-    }
-  ],
-  "total": 1,
-  "page": 1,
-  "pageSize": 10,
-  "totalPages": 1,
-  "sort": "newest",
-  "search": ""
+  "timezone": "UTC",
+  "range": "7d",
+  "totalLinks": 12,
+  "totalClicks": 40,
+  "rangeClicks": 9,
+  "series": [{ "date": "2026-03-09", "clicks": 2 }]
 }
 ```
 
-**400** invalid query parameters  
-**500** unexpected server error
+### Per-link analytics
+
+`GET /api/analytics/:code?range=7d|30d|all`
+
+Returns link metadata, totals, and the UTC day series for that link.
+
+### QR code PNG
+
+`GET /api/links/:code/qr`
+
+- **200** `image/png` attachment encoding the short URL
+- **404** unknown or reserved code
 
 ### Create a short link
 
@@ -144,18 +166,7 @@ Query parameters:
 
 `alias` is optional.
 
-**201**
-
-```json
-{
-  "id": "clx...",
-  "code": "docs",
-  "destination": "https://example.com/path",
-  "shortUrl": "http://localhost:3000/docs",
-  "createdAt": "2026-01-01T00:00:00.000Z",
-  "clickCount": 0
-}
-```
+**201** returns `id`, `code`, `destination`, `shortUrl`, `createdAt`, `clickCount`.
 
 **400** invalid body, invalid alias, or rejected destination  
 **409** alias already in use
@@ -187,12 +198,14 @@ Limitation: a destination that later redirects browsers to an internal host is o
 prisma/schema.prisma                         Link + Click models
 prisma/migrations/20261017213200_init/       Initial versioned migration
 src/app/api/links/route.ts                   List + create API
-src/app/[code]/route.ts                      Redirect handler
+src/app/api/analytics/                       Overview + per-link analytics
+src/app/api/links/[code]/qr/                 QR PNG download
+src/app/links/[code]/page.tsx                Per-link analytics + QR UI
 src/components/dashboard/                    Dashboard UI
-src/lib/codes.ts                             Short codes + alias rules
-src/lib/validate-url.ts                      Destination safety checks
-src/lib/list-query.ts                        List query parsing
-src/lib/links.ts                             Create / resolve / list / click logic
+src/components/analytics/                    Charts and range filters
+src/components/qr/                           QR preview card
+src/lib/analytics.ts                         UTC aggregation helpers
+src/lib/qr.ts / qr-encode.ts                 QR URL validation + encoding
 tests/                                       Vitest coverage
 ```
 
@@ -206,13 +219,12 @@ tests/                                       Vitest coverage
 6. `npm run typecheck`
 7. `npm run build`
 8. `npm run dev`
-9. Open `/`, create a link, confirm it appears in the table
-10. Search, sort, paginate, and copy a short URL
-11. Open a short URL and confirm redirect + click count increase after refresh
-12. Retry a duplicate alias and confirm a clear conflict error
+9. Open `/`, create a link, confirm analytics overview updates after clicks
+10. Open **Analytics** on a row, change date ranges, download the QR PNG
+11. Scan or open the short URL and confirm click counts increase after refresh
 
 ## Out of scope (later milestones)
 
-- Detailed analytics charts
-- QR codes
-- Authentication, Redis, Docker, paid services, public deployment
+- Authentication
+- Referrer / device / geo breakdowns
+- Redis, Docker, paid services, public deployment

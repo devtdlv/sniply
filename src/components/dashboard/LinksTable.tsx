@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import type { DashboardLink } from "@/components/dashboard/types";
 import { CopyButton } from "@/components/dashboard/CopyButton";
 
@@ -70,7 +71,7 @@ export function LinksTable({
   return (
     <>
       <div className="hidden overflow-x-auto md:block">
-        <table className="w-full min-w-[720px] text-left text-sm">
+        <table className="w-full min-w-[860px] text-left text-sm">
           <thead className="border-b border-[var(--border)] text-xs tracking-wide text-[var(--muted)] uppercase">
             <tr>
               <th className="px-4 py-3 font-medium">Short URL</th>
@@ -78,9 +79,7 @@ export function LinksTable({
               <th className="px-4 py-3 font-medium">Code</th>
               <th className="px-4 py-3 font-medium">Clicks</th>
               <th className="px-4 py-3 font-medium">Created</th>
-              <th className="px-4 py-3 font-medium">
-                <span className="sr-only">Actions</span>
-              </th>
+              <th className="px-4 py-3 font-medium">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -98,7 +97,7 @@ export function LinksTable({
                     {link.shortUrl}
                   </a>
                 </td>
-                <td className="max-w-[280px] px-4 py-3 align-top break-all text-[var(--muted)]">
+                <td className="max-w-[260px] px-4 py-3 align-top break-all text-[var(--muted)]">
                   {link.destination}
                 </td>
                 <td className="px-4 py-3 align-top font-mono">{link.code}</td>
@@ -109,7 +108,21 @@ export function LinksTable({
                   {formatDate(link.createdAt)}
                 </td>
                 <td className="px-4 py-3 align-top">
-                  <CopyButton value={link.shortUrl} />
+                  <div className="flex flex-wrap items-center gap-2">
+                    <CopyButton value={link.shortUrl} />
+                    <Link
+                      href={`/links/${encodeURIComponent(link.code)}`}
+                      className="btn btn-secondary px-2.5 py-1.5 text-xs"
+                    >
+                      Analytics
+                    </Link>
+                    <Link
+                      href={`/links/${encodeURIComponent(link.code)}#qr`}
+                      className="btn btn-ghost px-2.5 py-1.5 text-xs"
+                    >
+                      QR
+                    </Link>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -140,6 +153,20 @@ export function LinksTable({
               <span className="font-mono text-[var(--fg)]">/{link.code}</span>
               <span>{link.clickCount} clicks</span>
               <span>{formatDate(link.createdAt)}</span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Link
+                href={`/links/${encodeURIComponent(link.code)}`}
+                className="btn btn-secondary px-2.5 py-1.5 text-xs"
+              >
+                Analytics
+              </Link>
+              <Link
+                href={`/links/${encodeURIComponent(link.code)}#qr`}
+                className="btn btn-ghost px-2.5 py-1.5 text-xs"
+              >
+                QR
+              </Link>
             </div>
           </li>
         ))}
