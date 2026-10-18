@@ -59,6 +59,13 @@ export async function POST(request: Request) {
     );
   }
 
+  if (body.destination.trim().length === 0) {
+    return NextResponse.json(
+      { error: "destination must not be empty" },
+      { status: 400 },
+    );
+  }
+
   if (body.alias !== undefined && typeof body.alias !== "string") {
     return NextResponse.json(
       { error: "alias must be a string when provided" },

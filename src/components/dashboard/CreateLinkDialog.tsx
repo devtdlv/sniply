@@ -10,13 +10,19 @@ type CreateLinkDialogProps = {
   onCreated: (link: CreateLinkResponse) => void;
 };
 
+const FOCUSABLE_SELECTOR =
+  'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
 export function CreateLinkDialog({
   open,
   onClose,
   onCreated,
 }: CreateLinkDialogProps) {
   const titleId = useId();
+  const descriptionId = useId();
+  const dialogRef = useRef<HTMLDivElement>(null);
   const destinationRef = useRef<HTMLInputElement>(null);
+  const previouslyFocused = useRef<HTMLElement | null>(null);
   const [destination, setDestination] = useState("");
   const [alias, setAlias] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -25,20 +31,57 @@ export function CreateLinkDialog({
 
   useEffect(() => {
     if (!open) return;
+
+    previouslyFocused.current = document.activeElement as HTMLElement | null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
     setDestination("");
     setAlias("");
     setError(null);
     setCreated(null);
     setPending(false);
+
     const timer = window.setTimeout(() => destinationRef.current?.focus(), 40);
-    return () => window.clearTimeout(timer);
+
+    return () => {
+      window.clearTimeout(timer);
+      document.body.style.overflow = previousOverflow;
+      previouslyFocused.current?.focus?.();
+    };
   }, [open]);
 
   useEffect(() => {
     if (!open) return;
+
     function onKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape" && !pending) onClose();
+      if (event.key === "Escape" && !pending) {
+        event.preventDefault();
+        onClose();
+        return;
+      }
+
+      if (event.key !== "Tab" || !dialogRef.current) return;
+
+      const focusable = Array.from(
+        dialogRef.current.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR),
+      ).filter((element) => !element.hasAttribute("disabled"));
+
+      if (focusable.length === 0) return;
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const active = document.activeElement as HTMLElement | null;
+
+      if (event.shiftKey && active === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && active === last) {
+        event.preventDefault();
+        first.focus();
+      }
     }
+
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [open, pending, onClose]);
@@ -74,6 +117,11 @@ export function CreateLinkDialog({
 
       setCreated(data);
       onCreated(data);
+      window.setTimeout(() => {
+        dialogRef.current
+          ?.querySelector<HTMLElement>('button.btn-primary')
+          ?.focus();
+      }, 0);
     } catch {
       setError("Network error. Is the server running?");
     } finally {
@@ -90,9 +138,11 @@ export function CreateLinkDialog({
       }}
     >
       <div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
+        aria-describedby={descriptionId}
         className="animate-fade-up w-full max-w-lg rounded-2xl border border-[var(--border)] bg-[var(--bg-elevated)] p-5 shadow-[var(--shadow)] sm:p-6"
       >
         <div className="mb-5 flex items-start justify-between gap-4">
@@ -100,7 +150,7 @@ export function CreateLinkDialog({
             <h2 id={titleId} className="text-xl font-semibold tracking-tight">
               Create link
             </h2>
-            <p className="mt-1 text-sm text-[var(--muted)]">
+            <p id={descriptionId} className="mt-1 text-sm text-[var(--muted)]">
               Shorten a destination URL with an optional custom alias.
             </p>
           </div>
@@ -109,7 +159,7 @@ export function CreateLinkDialog({
             className="btn btn-ghost px-2 py-1 text-sm"
             onClick={onClose}
             disabled={pending}
-            aria-label="Close"
+            aria-label="Close create link dialog"
           >
             Close
           </button>
@@ -117,7 +167,11 @@ export function CreateLinkDialog({
 
         {created ? (
           <div className="space-y-4">
-            <div className="rounded-xl bg-[var(--success-soft)] px-4 py-3 text-sm text-[var(--success)]">
+            <div
+              className="rounded-xl bg-[var(--success-soft)] px-4 py-3 text-sm text-[var(--success)]"
+              role="status"
+              aria-live="polite"
+            >
               Link created successfully.
             </div>
             <div className="rounded-xl border border-[var(--border)] p-4">
@@ -156,6 +210,7 @@ export function CreateLinkDialog({
                 placeholder="https://example.com/path"
                 className="input-field"
                 disabled={pending}
+                autoComplete="url"
               />
             </label>
 
@@ -174,6 +229,8 @@ export function CreateLinkDialog({
                 title="Letters, numbers, underscores, and hyphens only"
                 className="input-field font-mono"
                 disabled={pending}
+                autoComplete="off"
+                spellCheck={false}
               />
             </label>
 
@@ -181,6 +238,7 @@ export function CreateLinkDialog({
               <p
                 className="rounded-xl bg-[var(--danger-soft)] px-4 py-3 text-sm text-[var(--danger)]"
                 role="alert"
+                aria-live="assertive"
               >
                 {error}
               </p>
@@ -195,7 +253,12 @@ export function CreateLinkDialog({
               >
                 Cancel
               </button>
-              <button type="submit" className="btn btn-primary" disabled={pending}>
+              <button
+                type="submit"
+                className="btn btn-primary"
+                disabled={pending}
+                aria-busy={pending}
+              >
                 {pending ? "Creating…" : "Create short link"}
               </button>
             </div>

@@ -1,161 +1,225 @@
 # Sniply
 
-Local-first URL shortener and analytics application (Portfolio Project #2).
+**Local-first URL shortener with click analytics and QR codes.**
 
-Milestone 1 covers secure shortening, redirects, and click recording. Milestone 2 adds a link management dashboard. Milestone 3 adds click analytics and downloadable QR codes.
+Sniply is a self-contained portfolio project that demonstrates full-stack TypeScript engineering: secure link creation, PostgreSQL persistence, a responsive management dashboard, UTC click analytics, and locally generated QR codes.
 
-## Stack
+> This project is intentionally **local-only**. It is **not deployed** and does not use hosting, paid cloud services, authentication providers, Redis, or Docker.
 
-- Next.js (App Router)
-- TypeScript (strict)
-- React
-- Tailwind CSS
-- PostgreSQL
-- Prisma
-- Vitest
-- `qrcode` (local QR generation, no external service)
+Repository: [github.com/devtdlv/sniply](https://github.com/devtdlv/sniply)
 
 ## Features
 
-### Milestone 1
+- Shorten HTTP(S) destinations with generated codes or optional custom aliases
+- Reject unsafe schemes, credentials, localhost, and private/link-local targets (including DNS checks)
+- Redirect short links with click recording
+- Responsive dashboard: search, sort, pagination, create modal, copy-to-clipboard
+- Analytics overview and per-link analytics with `7d` / `30d` / `all` filters
+- UTC day-bucket click charts
+- Local QR preview and PNG download (no external QR API)
 
-- Create short links via `POST /api/links`
-- Optional custom aliases with conflict detection (`409`)
-- Cryptographically random short codes when no alias is provided
-- Redirect via `GET /:code` (`302`) with click event recording
-- Destination validation that rejects unsafe schemes, credentials, localhost, and private/link-local network targets (including DNS-resolved addresses)
+## Tech stack
 
-### Milestone 2
+| Layer | Choice |
+| --- | --- |
+| Framework | Next.js 15 (App Router) |
+| Language | TypeScript (strict) |
+| UI | React 19, Tailwind CSS 4 |
+| Database | PostgreSQL |
+| ORM | Prisma 6 |
+| Tests | Vitest |
+| QR | `qrcode` (local) |
+| Runtime | Node.js 24 LTS |
 
-- Responsive SaaS-style dashboard at `/`
-- Create links from a modal with validation, conflict, success, and pending states
-- List links with destination, short code, short URL, created date, and total clicks
-- Search by destination URL or short code
-- Sort by newest, oldest, or most clicked
-- Copy short URL to clipboard with confirmation
-- Paginated `GET /api/links` backed by Prisma (default 10 per page, max 50)
-- Loading, empty, and error states in the UI
+## Architecture overview
 
-### Milestone 3
+```text
+Browser (dashboard + link pages)
+        │
+        ▼
+Next.js App Router
+  ├── UI routes: / , /links/[code]
+  ├── Redirect:  /[code]  → 302 + Click insert
+  └── JSON/PNG APIs under /api/*
+        │
+        ▼
+Prisma Client
+        │
+        ▼
+PostgreSQL
+  ├── Link (code, destination, timestamps)
+  └── Click (linkId, createdAt)
+```
 
-- Dashboard analytics overview: total links, total clicks, clicks in range, and a responsive bar chart
-- Date filters: `7d`, `30d`, and `all`
-- Per-link analytics page at `/links/:code` with destination, short URL, created date, totals, and chart
-- Local QR preview and PNG download for each short URL
-- Server-side click aggregation from existing `Click` rows (no schema changes)
+- Business rules live in `src/lib/` (`links`, `validate-url`, `analytics`, `qr`)
+- Route handlers stay thin: parse input, call lib, return JSON or redirects
+- Unit tests mock Prisma; they do not require a running database
 
-## Analytics timezone convention
+### Analytics timezone
 
-All analytics day buckets and range windows use **UTC calendar days**.
+All analytics buckets use **UTC calendar days** (`YYYY-MM-DD`). API payloads include `"timezone": "UTC"`.
 
-- Day keys are `YYYY-MM-DD` in UTC
-- `7d` / `30d` include today (UTC) and the previous 6 / 29 UTC days
-- `all` spans from the first click day through today (UTC); empty when there are no clicks
-- API responses include `"timezone": "UTC"`
+## Screenshots
+
+### Dashboard
+
+Link management, analytics overview, and demo data.
+
+![Sniply dashboard](docs/screenshots/dashboard.png)
+
+### Create Link
+
+URL shortening with optional custom aliases.
+
+![Create link dialog](docs/screenshots/create-link.png)
+
+### Link Analytics
+
+Per-link click activity and QR code generation.
+
+![Link analytics](docs/screenshots/link-analytics.png)
 
 ## Prerequisites
 
-- **Node.js 24 LTS** (recommended). `package.json` engines require `>=24.0.0`.
-- PostgreSQL 14+ running locally
-- npm 10+ (ships with current Node.js releases)
+- Node.js 24 LTS (`engines.node` is `>=24.0.0`)
+- npm 10+
+- PostgreSQL 14+ running locally (18 is fine)
 
 ## Environment variables
 
-Copy `.env.example` to `.env` and fill in values:
+Copy the example file and edit values. **Never commit `.env`.**
+
+```powershell
+Copy-Item .env.example .env
+```
 
 | Variable | Required | Description |
 | --- | --- | --- |
 | `DATABASE_URL` | Yes | PostgreSQL connection string for Prisma |
-| `NEXT_PUBLIC_APP_URL` | Yes | Public origin used when returning `shortUrl` and encoding QR codes (no trailing slash), e.g. `http://localhost:3000` |
+| `NEXT_PUBLIC_APP_URL` | Yes | Public origin for short URLs and QR payloads (no trailing slash), e.g. `http://localhost:3000` |
 
-Example:
+`.env.example` shows the shape only. Use your own local username, password, and database name.
 
-```bash
-cp .env.example .env
+## Local setup (Windows PowerShell)
+
+### 1. Clone and install
+
+```powershell
+git clone https://github.com/devtdlv/sniply.git
+cd sniply
+npm install
 ```
 
-## Local setup
+### 2. Create the PostgreSQL database and role
 
-```bash
-# Install dependencies (also runs prisma generate via postinstall)
-npm install
+Using `psql` as a superuser (adjust to your local admin setup):
 
-# Apply versioned Prisma migrations
+```powershell
+psql -U postgres -c "CREATE USER sniply_user WITH LOGIN PASSWORD 'choose-a-local-password';"
+psql -U postgres -c "CREATE DATABASE sniply OWNER sniply_user;"
+psql -U postgres -d sniply -c "GRANT ALL ON SCHEMA public TO sniply_user;"
+```
+
+Ensure the role has `LOGIN` and `CONNECT` on `sniply`.
+
+### 3. Configure environment
+
+```powershell
+Copy-Item .env.example .env
+notepad .env
+```
+
+Set `DATABASE_URL` and `NEXT_PUBLIC_APP_URL`.
+
+### 4. Apply Prisma migrations
+
+```powershell
 npm run db:migrate:deploy
+```
 
-# Start the Next.js dev server
+For schema iteration during development:
+
+```powershell
+npm run db:migrate
+```
+
+Check status:
+
+```powershell
+npx prisma migrate status
+```
+
+### 5. (Optional) Seed fictional demo data
+
+For portfolio screenshots and manual UI testing, load a deterministic demo dataset:
+
+```powershell
+npm run db:seed:demo
+```
+
+What it inserts (fictional only):
+
+- **30** demo links with `demo-` prefixed aliases (for example `demo-typescript-guide`, `demo-react-docs`)
+- **1,200** demo click events spread across the last 30 UTC days, with varied traffic (popular, low, and some zero-click links)
+
+Safety properties:
+
+- Does **not** truncate, reset, or delete existing rows
+- Skips any occupied code whose destination does not exactly match the demo plan
+- Uses stable demo click IDs (`demo_clk_v1_...`) so re-running the command does not duplicate clicks
+- Leaves non-demo / user-created links untouched
+
+Re-run anytime; the second run should report links reused and clicks skipped as duplicates.
+
+### 6. Run the app
+
+```powershell
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) for the dashboard.
+Open [http://localhost:3000](http://localhost:3000).
 
-For local schema iteration while developing new models, prefer `npm run db:migrate` (`prisma migrate dev`) over `db:push` so changes stay in versioned migrations.
-
-### Useful scripts
+## Scripts
 
 | Script | Purpose |
 | --- | --- |
-| `npm run dev` | Start development server |
+| `npm run dev` | Development server |
 | `npm run build` | Production build |
 | `npm run start` | Start production server |
-| `npm run lint` | Run ESLint (flat config / ESLint CLI) |
-| `npm run typecheck` | TypeScript check (`tsc --noEmit`) |
-| `npm test` | Run Vitest suite once |
-| `npm run test:watch` | Vitest watch mode |
-| `npm run db:generate` | Regenerate Prisma Client |
-| `npm run db:migrate` | Create/apply migrations in development |
-| `npm run db:migrate:deploy` | Apply pending migrations (existing DBs / CI) |
-| `npm run db:migrate:status` | Show migration status |
-| `npm run db:push` | Push schema without a migration (legacy / emergency only) |
+| `npm run lint` | ESLint |
+| `npm run typecheck` | `tsc --noEmit` |
+| `npm test` | Vitest once |
+| `npm run test:watch` | Vitest watch |
+| `npm run db:generate` | Generate Prisma Client |
+| `npm run db:migrate` | Create/apply migrations (dev) |
+| `npm run db:migrate:deploy` | Apply migrations |
+| `npm run db:migrate:status` | Migration status |
+| `npm run db:seed:demo` | Insert fictional demo links/clicks (idempotent) |
+| `npm run db:push` | Schema push without migration (legacy/emergency) |
 
-## API
+## Testing
 
-### List links
-
-`GET /api/links`
-
-Query parameters:
-
-| Param | Default | Description |
-| --- | --- | --- |
-| `q` or `search` | _(empty)_ | Case-insensitive match on destination or short code |
-| `sort` | `newest` | `newest`, `oldest`, or `most_clicked` |
-| `page` | `1` | 1-based page index |
-| `pageSize` | `10` | Page size (max `50`) |
-
-### Overview analytics
-
-`GET /api/analytics?range=7d|30d|all`
-
-Returns totals plus a UTC day series:
-
-```json
-{
-  "timezone": "UTC",
-  "range": "7d",
-  "totalLinks": 12,
-  "totalClicks": 40,
-  "rangeClicks": 9,
-  "series": [{ "date": "2026-03-09", "clicks": 2 }]
-}
+```powershell
+npm test
+npm run lint
+npm run typecheck
+npm run build
 ```
 
-### Per-link analytics
+CI runs the same checks on push/PR to `main` via GitHub Actions (Node 24, `npm ci`). Tests mock the database and do not require PostgreSQL in CI.
 
-`GET /api/analytics/:code?range=7d|30d|all`
+## API summary
 
-Returns link metadata, totals, and the UTC day series for that link.
+| Method | Path | Purpose |
+| --- | --- | --- |
+| `GET` | `/api/links` | Paginated list (`q`, `sort`, `page`, `pageSize`) |
+| `POST` | `/api/links` | Create short link |
+| `GET` | `/api/analytics` | Overview analytics (`range=7d\|30d\|all`) |
+| `GET` | `/api/analytics/:code` | Per-link analytics |
+| `GET` | `/api/links/:code/qr` | QR PNG download |
+| `GET` | `/:code` | Redirect + record click |
 
-### QR code PNG
-
-`GET /api/links/:code/qr`
-
-- **200** `image/png` attachment encoding the short URL
-- **404** unknown or reserved code
-
-### Create a short link
-
-`POST /api/links`
+Create body:
 
 ```json
 {
@@ -164,67 +228,47 @@ Returns link metadata, totals, and the UTC day series for that link.
 }
 ```
 
-`alias` is optional.
+Common responses: `201` created, `400` validation, `404` missing/invalid code, `409` alias conflict, `500` generic server errors (no internal stack traces).
 
-**201** returns `id`, `code`, `destination`, `shortUrl`, `createdAt`, `clickCount`.
+## Security considerations
 
-**400** invalid body, invalid alias, or rejected destination  
-**409** alias already in use
+- Destinations limited to `http:` / `https:`
+- Credentials in URLs rejected
+- Localhost, private, link-local, CGNAT, and metadata ranges blocked (literal IP and DNS-resolved)
+- Destination URLs capped at 2048 characters
+- Short-code path params validated before DB lookup (rejects reserved names and unsafe characters)
+- Pagination `pageSize` capped at 50
+- API error responses avoid leaking internal exception details
+- No authentication: suitable for local portfolio demos only
 
-### Redirect
+Known residual risks:
 
-`GET /:code`
-
-- **302** to the stored destination (records a `Click`)
-- **404** unknown or reserved code
-- **400** empty code
-
-## URL validation policy
-
-At creation time Sniply:
-
-1. Requires an absolute `http:` or `https:` URL
-2. Rejects embedded credentials (`user:pass@host`)
-3. Rejects localhost and `*.localhost` hostnames
-4. Rejects literal loopback / private / link-local / CGNAT / metadata addresses
-5. Resolves the hostname via DNS and rejects any answer in those blocked ranges
-6. Does **not** fetch the destination or follow redirect chains (avoids request-based SSRF)
-
-Limitation: a destination that later redirects browsers to an internal host is outside creation-time control. Sniply validates what it stores; it does not proxy or sanitize third-party redirect behavior.
+- Destination servers may still redirect browsers to internal hosts after creation-time validation
+- Obscure IP encodings / DNS rebinding after creation are not fully covered
+- Anyone with local access can create and list links
 
 ## Project layout
 
 ```text
-prisma/schema.prisma                         Link + Click models
-prisma/migrations/20261017213200_init/       Initial versioned migration
-src/app/api/links/route.ts                   List + create API
-src/app/api/analytics/                       Overview + per-link analytics
-src/app/api/links/[code]/qr/                 QR PNG download
-src/app/links/[code]/page.tsx                Per-link analytics + QR UI
-src/components/dashboard/                    Dashboard UI
-src/components/analytics/                    Charts and range filters
-src/components/qr/                           QR preview card
-src/lib/analytics.ts                         UTC aggregation helpers
-src/lib/qr.ts / qr-encode.ts                 QR URL validation + encoding
-tests/                                       Vitest coverage
+.github/workflows/ci.yml          CI: lint, typecheck, test, build
+docs/screenshots/                 Screenshot instructions (+ PNGs when captured)
+prisma/schema.prisma              Link + Click models
+prisma/migrations/                Versioned SQL migrations
+scripts/seed-demo.ts              Idempotent fictional demo-data seeder
+src/app/                          App Router pages and API routes
+src/components/                   Dashboard, analytics, QR UI
+src/lib/                          Domain logic (includes demo-seed plan)
+tests/                            Vitest suites
 ```
 
-## Verification checklist
+## Known limitations
 
-1. `npm install`
-2. Configure `.env` from `.env.example`
-3. `npm run db:migrate:deploy`
-4. `npm test`
-5. `npm run lint`
-6. `npm run typecheck`
-7. `npm run build`
-8. `npm run dev`
-9. Open `/`, create a link, confirm analytics overview updates after clicks
-10. Open **Analytics** on a row, change date ranges, download the QR PNG
-11. Scan or open the short URL and confirm click counts increase after refresh
+- Local-first portfolio project; not deployed
+- No authentication, billing, or multi-tenant isolation
+- No referrer/device/geo analytics
+- No edit/delete link management UI
+- No Redis/Docker/hosting configuration by design
 
-## Out of scope (later milestones)
+## License
 
-- Authentication
-- Referrer / device / geo breakdowns
-- Redis, Docker, paid services, public deployment
+Private portfolio repository unless otherwise stated by the owner.

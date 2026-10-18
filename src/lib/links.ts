@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import {
   generateShortCode,
   isReservedCode,
+  isValidLinkCodeParam,
+  MAX_DESTINATION_LENGTH,
   validateAlias,
 } from "@/lib/codes";
 import type { ListLinksQuery, ListSort } from "@/lib/list-query";
@@ -47,6 +49,16 @@ export type ResolveLinkResult =
 export async function createLink(
   input: CreateLinkInput,
 ): Promise<CreateLinkResult> {
+  if (input.destination.length > MAX_DESTINATION_LENGTH) {
+    return {
+      ok: false,
+      failure: {
+        status: 400,
+        error: `Destination URL must be at most ${MAX_DESTINATION_LENGTH} characters`,
+      },
+    };
+  }
+
   const validation = await validateDestinationUrl(input.destination);
   if (!validation.ok) {
     return { ok: false, failure: { status: 400, error: validation.error } };
@@ -134,7 +146,7 @@ export async function resolveLink(code: string): Promise<ResolveLinkResult> {
     return { ok: false, status: 400, error: "Short code is required" };
   }
 
-  if (isReservedCode(normalized)) {
+  if (!isValidLinkCodeParam(normalized) || isReservedCode(normalized)) {
     return { ok: false, status: 404, error: "Short link not found" };
   }
 

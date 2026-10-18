@@ -23,8 +23,11 @@ export function Pagination({
   const to = Math.min(page * pageSize, total);
 
   return (
-    <div className="flex flex-col gap-3 border-t border-[var(--border)] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-      <p className="text-sm text-[var(--muted)]">
+    <nav
+      className="flex flex-col gap-3 border-t border-[var(--border)] px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+      aria-label="Pagination"
+    >
+      <p className="text-sm text-[var(--muted)]" aria-live="polite">
         Showing {from}-{to} of {total}
       </p>
       <div className="flex items-center gap-2">
@@ -33,6 +36,7 @@ export function Pagination({
           className="btn btn-secondary px-3 py-1.5 text-sm"
           onClick={() => onPageChange(page - 1)}
           disabled={disabled || page <= 1}
+          aria-label="Go to previous page"
         >
           Previous
         </button>
@@ -44,10 +48,11 @@ export function Pagination({
           className="btn btn-secondary px-3 py-1.5 text-sm"
           onClick={() => onPageChange(page + 1)}
           disabled={disabled || page >= totalPages}
+          aria-label="Go to next page"
         >
           Next
         </button>
       </div>
-    </div>
+    </nav>
   );
 }

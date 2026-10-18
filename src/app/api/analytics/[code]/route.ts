@@ -4,7 +4,7 @@ import {
   parseAnalyticsRange,
 } from "@/lib/analytics";
 import { shortUrlForCode } from "@/lib/app-url";
-import { isReservedCode } from "@/lib/codes";
+import { parseRouteCode } from "@/lib/route-code";
 
 type RouteContext = {
   params: Promise<{ code: string }>;
@@ -12,9 +12,9 @@ type RouteContext = {
 
 export async function GET(request: Request, context: RouteContext) {
   const { code } = await context.params;
-  const trimmed = code.trim();
+  const trimmed = parseRouteCode(code);
 
-  if (!trimmed || isReservedCode(trimmed)) {
+  if (!trimmed) {
     return NextResponse.json({ error: "Short link not found" }, { status: 404 });
   }
 

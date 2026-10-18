@@ -8,6 +8,8 @@ export const GENERATED_CODE_LENGTH = 7;
 export const ALIAS_MIN_LENGTH = 3;
 export const ALIAS_MAX_LENGTH = 32;
 export const ALIAS_PATTERN = /^[a-zA-Z0-9_-]+$/;
+/** Upper bound for stored destination URLs (create API). */
+export const MAX_DESTINATION_LENGTH = 2048;
 
 /** Path segments reserved by the app or Next.js internals. */
 export const RESERVED_CODES = new Set([
@@ -81,4 +83,17 @@ export function validateAlias(raw: string): AliasValidationResult {
 
 export function isReservedCode(code: string): boolean {
   return RESERVED_CODES.has(code.toLowerCase());
+}
+
+/**
+ * Validates path/query short-code params before DB lookups.
+ * Accepts generated codes and custom aliases; rejects empty, oversized,
+ * or non-alias characters (e.g. path traversal fragments).
+ */
+export function isValidLinkCodeParam(code: string): boolean {
+  const trimmed = code.trim();
+  if (trimmed.length < 1 || trimmed.length > ALIAS_MAX_LENGTH) {
+    return false;
+  }
+  return ALIAS_PATTERN.test(trimmed);
 }

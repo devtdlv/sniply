@@ -30,9 +30,12 @@ export function CopyButton({ value, label = "Copy" }: CopyButtonProps) {
       type="button"
       onClick={onCopy}
       className="btn btn-secondary px-2.5 py-1.5 text-xs"
-      aria-label={copied ? "Copied" : `Copy ${value}`}
+      aria-label={copied ? `${label} successful` : label}
     >
-      {copied ? "Copied" : label}
+      <span aria-hidden="true">{copied ? "Copied" : label}</span>
+      <span className="sr-only" aria-live="polite">
+        {copied ? "Copied to clipboard" : ""}
+      </span>
     </button>
   );
 }

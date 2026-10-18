@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { LinkAnalyticsPanel } from "@/components/analytics/LinkAnalyticsPanel";
 import { AppHeader } from "@/components/layout/AppHeader";
-import { isReservedCode } from "@/lib/codes";
+import { parseRouteCode } from "@/lib/route-code";
 
 type PageProps = {
   params: Promise<{ code: string }>;
@@ -10,16 +10,19 @@ type PageProps = {
 
 export default async function LinkDetailPage({ params }: PageProps) {
   const { code } = await params;
-  const trimmed = code.trim();
+  const trimmed = parseRouteCode(code);
 
-  if (!trimmed || isReservedCode(trimmed)) {
+  if (!trimmed) {
     notFound();
   }
 
   return (
     <div className="min-h-screen">
       <AppHeader active="link" />
-      <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
+      <main
+        id="main-content"
+        className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 sm:py-10"
+      >
         <div className="animate-fade-up mb-6">
           <Link
             href="/"

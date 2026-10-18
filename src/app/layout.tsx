@@ -16,7 +16,8 @@ const ibmPlexMono = IBM_Plex_Mono({
 
 export const metadata: Metadata = {
   title: "Sniply",
-  description: "Local-first URL shortener and analytics",
+  description:
+    "Shorten links, track clicks, and share QR codes with a clean local dashboard.",
 };
 
 export default function RootLayout({
@@ -29,6 +30,9 @@ export default function RootLayout({
       <body
         className={`${ibmPlexSans.variable} ${ibmPlexMono.variable} ${ibmPlexSans.className} antialiased`}
       >
+        <a href="#main-content" className="skip-link">
+          Skip to main content
+        </a>
         {children}
       </body>
     </html>

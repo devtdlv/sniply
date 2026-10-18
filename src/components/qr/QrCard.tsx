@@ -76,6 +76,7 @@ export function QrCard({ code, shortUrl }: QrCardProps) {
             className="btn btn-primary"
             href={`/api/links/${encodeURIComponent(code)}/qr`}
             download={`sniply-${code}.png`}
+            aria-label={`Download QR code PNG for ${shortUrl}`}
           >
             Download PNG
           </a>

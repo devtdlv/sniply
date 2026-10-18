@@ -93,7 +93,8 @@ samp {
     box-shadow 0.15s ease;
 }
 
-.input-field:focus {
+.input-field:focus,
+.input-field:focus-visible {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--ring);
 }
@@ -109,7 +110,61 @@ samp {
   transition:
     background-color 0.15s ease,
     opacity 0.15s ease,
-    transform 0.15s ease;
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.btn:focus {
+  outline: none;
+}
+
+.btn:focus-visible {
+  box-shadow: 0 0 0 3px var(--ring);
+}
+
+a:focus-visible {
+  outline: 3px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.skip-link {
+  position: absolute;
+  left: 1rem;
+  top: -100%;
+  z-index: 100;
+  border-radius: 0.65rem;
+  background: var(--fg);
+  color: #fff;
+  padding: 0.65rem 1rem;
+  text-decoration: none;
+}
+
+.skip-link:focus {
+  top: 1rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-up,
+  .animate-toast-in,
+  .skeleton {
+    animation: none !important;
+  }
+
+  .btn:active:not(:disabled) {
+    transform: none;
+  }
 }
 
 .btn:active:not(:disabled) {
