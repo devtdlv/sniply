@@ -20,6 +20,7 @@
     "db:migrate:deploy": "prisma migrate deploy",
     "db:migrate:status": "prisma migrate status",
     "db:seed:demo": "tsx scripts/seed-demo.ts",
+    "brand:icons": "node scripts/generate-brand-icons.mjs",
     "postinstall": "prisma generate"
   },
   "dependencies": {

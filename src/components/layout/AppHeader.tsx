@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BrandMark } from "@/components/brand/BrandMark";
 
 type AppHeaderProps = {
   active?: "dashboard" | "link";
@@ -13,12 +14,10 @@ export function AppHeader({ active = "dashboard" }: AppHeaderProps) {
           className="flex items-center gap-3"
           aria-label="Sniply home"
         >
-          <span
-            aria-hidden="true"
-            className="grid h-9 w-9 place-items-center rounded-xl bg-[var(--accent)] text-sm font-semibold tracking-tight text-white shadow-[0_8px_20px_rgba(11,110,79,0.28)]"
-          >
-            S
-          </span>
+          <BrandMark
+            size={36}
+            className="h-9 w-9 shrink-0 rounded-xl shadow-[0_8px_20px_rgba(11,110,79,0.28)]"
+          />
           <div>
             <p className="text-lg font-semibold tracking-tight">Sniply</p>
             <p className="text-xs text-[var(--muted)]">
